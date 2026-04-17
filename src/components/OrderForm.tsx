@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -39,9 +39,20 @@ export default function OrderForm() {
   const [nomenclatures, setNomenclatures] = useState<Nomenclature[]>([]);
   const [loading, setLoading] = useState(false);
   const [connected, setConnected] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const { register, handleSubmit, control, watch, setValue, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, control, watch, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
+    defaultValues: {
+      token: '',
+      phone: '',
+      organization_id: undefined,
+      warehouse_id: undefined,
+      paybox_id: undefined,
+      price_type_id: undefined,
+      products: [{ nomenclature_id: 0, quantity: 1, price: 0 }],
+      comment: '',
+    },
   });
 
   const { fields, append, remove } = useFieldArray({
@@ -52,20 +63,34 @@ export default function OrderForm() {
   const token = watch('token');
   const phone = watch('phone');
 
+  const loadDataRef = useRef<() => Promise<void>>(async () => {});
+  const searchContragentsRef = useRef<() => Promise<void>>(async () => {});
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    loadDataRef.current = loadData;
+  }, []);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    searchContragentsRef.current = searchContragents;
+  }, []);
+
   useEffect(() => {
     if (token && connected) {
-      loadData();
+      loadDataRef.current();
     }
   }, [token, connected]);
 
   useEffect(() => {
     if (token && phone) {
-      searchContragents();
+      searchContragentsRef.current();
     }
   }, [token, phone]);
 
   const connect = () => {
     if (token) {
+      setError(null);
       setConnected(true);
       loadData();
     }
@@ -73,6 +98,7 @@ export default function OrderForm() {
 
   const loadData = async () => {
     setLoading(true);
+    setError(null);
     try {
       const [ws, pbs, orgs, pts, noms] = await Promise.all([
         fetchWarehouses(token),
@@ -86,19 +112,24 @@ export default function OrderForm() {
       setOrganizations(orgs);
       setPriceTypes(pts);
       setNomenclatures(noms);
-    } catch (error) {
-      console.error(error);
+    } catch (err) {
+      const errorMessage = (err as Error)?.message || 'Ошибка при загрузке данных. Проверьте токен и интернет-соединение.';
+      setError(errorMessage);
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
   const searchContragents = async () => {
+    setError(null);
     try {
       const cs = await fetchContragents(token, phone);
       setContragents(cs);
-    } catch (error) {
-      console.error(error);
+    } catch (err) {
+      const errorMessage = (err as Error)?.message || 'Ошибка при поиске клиента';
+      setError(errorMessage);
+      console.error(err);
     }
   };
 
@@ -106,6 +137,7 @@ export default function OrderForm() {
     append({ nomenclature_id: 0, quantity: 1, price: 0 });
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const calculateTotal = () => {
     return fields.reduce((total, field, index) => {
       const quantity = watch(`products.${index}.quantity`) || 0;
@@ -148,6 +180,19 @@ export default function OrderForm() {
 
   return (
     <div className="max-w-md mx-auto p-4 space-y-6">
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          <p className="font-semibold">Ошибка</p>
+          <p className="text-sm">{error}</p>
+        </div>
+      )}
+      
+      {loading && (
+        <div className="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded">
+          <p>Загрузка данных...</p>
+        </div>
+      )}
+      
       <Card>
         <CardHeader>
           <CardTitle>Мобильный заказ</CardTitle>
@@ -159,8 +204,8 @@ export default function OrderForm() {
             <p className="text-sm text-gray-600 mb-4">Введите токен и загрузите справочники</p>
             <div className="flex gap-2">
               <Input placeholder="Token" {...register('token')} />
-              <Button onClick={connect} disabled={!token || connected}>
-                {connected ? 'Подключено' : 'Подключить'}
+              <Button onClick={connect} disabled={!token || connected || loading}>
+                {loading ? 'Загрузка...' : connected ? 'Подключено' : 'Подключить'}
               </Button>
             </div>
             {errors.token && <p className="text-red-500 text-sm">{errors.token.message}</p>}
