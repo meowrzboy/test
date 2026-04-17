@@ -1,22 +1,51 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# TableCRM Mobile Order Form
+
+A mobile webapp for creating orders in TableCRM using Next.js, shadcn/ui, and the TableCRM API.
+
+## Features
+
+- Token-based authentication
+- Client search by phone
+- Selection of organizations, warehouses, payboxes, price types
+- Product selection
+- Create sale or create and conduct
+
+## Tech Stack
+
+- Next.js 16 with App Router
+- TypeScript
+- Tailwind CSS
+- shadcn/ui
+- React Hook Form with Zod validation
 
 ## Getting Started
 
-First, run the development server:
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+2. Run the development server:
+   ```bash
+   npm run dev
+   ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+3. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## API Integration
+
+The app integrates with TableCRM API endpoints:
+- /meta/contragents/ - Clients
+- /warehouses/ - Warehouses
+- /meta/payboxes/ - Payboxes
+- /organizations/ - Organizations
+- /price_types/ - Price Types
+- /nomenclature/ - Products
+- /docs_sales/ - Create sales
+
+## Deployment
+
+Deploy to Vercel or any platform supporting Next.js.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
